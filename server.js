@@ -22,10 +22,9 @@ module.exports = http.createServer((req, res) => {
   if (req.method === 'GET') {
     if (pathname === '/') {
       sendFile(config.get('publicRoot') + '/index.html', res);
-      console.log(config.get('publicRoot') + 'index.html');
     } else {
-      let filepath = path.join(config.get('publicRoot'));
-      sendFile(filepath);
+      let filepath = path.join(config.get('publicRoot'), filename);
+      sendFile(filepath, res);
     }
   }
 
@@ -35,11 +34,9 @@ module.exports = http.createServer((req, res) => {
       res.end('Can\'t do this!');
       return;
     }
-    receiveFile(path.join(config.get('fileRoot'), filename), req,res);
+    receiveFile(path.join(config.get('filesRoot'), filename), req,res);
   }
-})
-
-//server.listen(3000);
+});
 
 function receiveFile(filepath, req, res) {
   if (req.headers['content-length'] > config.get('limitFileSize')) {
@@ -98,7 +95,7 @@ function receiveFile(filepath, req, res) {
 }
 
 function sendFile(filepath, res) {
-  let fileStream = fs.createReadStream(filepath);
+  let fileStream = new fs.ReadStream(filepath);
   fileStream.pipe(res);
 
   fileStream.on('error', err => {
