@@ -11,7 +11,7 @@ module.exports = http.createServer((req, res) => {
   let pathname = decodeURIComponent(url.parse(req.url).pathname);
   let filename = pathname.slice(1);
 
-  if (~pathname.indexOf('\0')) {
+  if (~pathname.indexOf('\0') || ~filename.indexOf('/')) {
     res.statusCode = 400;
     res.end("Bad request");
     return;
@@ -23,7 +23,7 @@ module.exports = http.createServer((req, res) => {
     if (pathname === '/') {
       sendFile(config.get('publicRoot') + '/index.html', res);
     } else {
-      let filepath = path.join(config.get('publicRoot'), filename);
+      let filepath = path.join(config.get('filesRoot'), filename);
       sendFile(filepath, res);
     }
   }
@@ -34,13 +34,34 @@ module.exports = http.createServer((req, res) => {
       res.end('Can\'t do this!');
       return;
     }
-    receiveFile(path.join(config.get('filesRoot'), filename), req,res);
+    receiveFile(path.join(config.get('filesRoot'), filename), req, res);
+  }
+
+  if (req.method === 'DELETE') {
+    if (!filename) {
+      res.writeHead(400);
+      res.end('Can\'t do this!');
+      return;
+    }
+    deleteFile(path.join(config.get('filesRoot'), filename), req, res);
   }
 });
 
+function deleteFile(filepath, req, res) {
+  fs.unlink(filepath, err => {
+
+    if (err && err.code === 'ENOENT') {
+      res.writeHead(404);
+      res.end('File not found');
+      return;
+    }
+    res.end('ok');
+  })
+}
+
 function receiveFile(filepath, req, res) {
   if (req.headers['content-length'] > config.get('limitFileSize')) {
-    res.statusCode = 513;
+    res.statusCode = 413;
     res.end('file is too big');
     return;
   }
@@ -54,7 +75,7 @@ function receiveFile(filepath, req, res) {
       size += chunk.length;
 
       if (size > config.get('limitFileSize')) {
-        res.writeHead(513, {'Connection': 'close'});
+        res.writeHead(413, {'Connection': 'close'});
         res.end('File is too big');
 
         writeStream.destroy();
