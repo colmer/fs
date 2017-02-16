@@ -129,6 +129,7 @@ function sendFile(filepath, res) {
         res.statusCode = 500;
         res.end('Server error');
       } else {
+        res.statusCode = 200;
         res.end();
       }
     }
